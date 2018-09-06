@@ -1,9 +1,9 @@
-var mysql = require('mysql');
-var inquirer = require('inquirer');
+let mysql = require('mysql');
+let inquirer = require('inquirer');
 
-var connection = mysql.createConnection({
+let connection = mysql.createConnection({
     host: 'localhost',
-    port: 3306,
+    port: 8889,
     user: 'root',
     password: 'root',
     database: 'bamazon'
@@ -12,11 +12,11 @@ var connection = mysql.createConnection({
 connection.connect(err => {
     if (err) throw err;
     console.log("connected as id" + connection.threadId);
-    customer.displayItems();
+    customerInterface.displayItems();
 });
 
 
-let customer = {
+let customerInterface = {
 
     orderTotal: 0,
     cartItems: [],
@@ -103,4 +103,8 @@ let customer = {
         connection.query(query, [quantityPurchased, this.cartItems[0].id])
 
     }
+}
+
+module.exports = {
+    displayItems: customerInterface.displayItems
 }

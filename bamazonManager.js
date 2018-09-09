@@ -110,9 +110,6 @@ let managerInterface = {
                 .then(answer => {
                     let pipe = answer.selectedProduct.indexOf('|');
                     let product = answer.selectedProduct.slice((pipe + 2));
-                    // console.log('try this', answer.selectedProduct.slice((pipe + 2)));
-                    // console.log('quantity', answer.quantityToAdd)
-                    // console.log('product', answer.selectedProduct)
                 connection.query('UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_name = ?', 
                 [
                     answer.quantityToAdd, product 
@@ -160,7 +157,7 @@ let managerInterface = {
                         {
                             product_name: answer.product_name,
                             department_name: answer.department_name,
-                            price: parseInt(answer.price),
+                            price: parseFloat(answer.price),
                             stock_quantity: parseInt(answer.stock_quantity)
                         }, (err, res) => {
                             if(err) console.log(err);

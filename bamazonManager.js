@@ -105,18 +105,21 @@ let managerInterface = {
                 }
             ];
 
-            products = JSON.stringify(products);
-            console.log(products);
-
             inquirer
                 .prompt(questions)
                 .then(answer => {
+                    let pipe = answer.selectedProduct.indexOf('|');
+                    let product = answer.selectedProduct.slice((pipe + 2));
+                    // console.log('try this', answer.selectedProduct.slice((pipe + 2)));
+                    // console.log('quantity', answer.quantityToAdd)
+                    // console.log('product', answer.selectedProduct)
                 connection.query('UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_name = ?', 
                 [
-                    answer.quantityToAdd, answer.selectedProduct
+                    answer.quantityToAdd, product 
                 ], (err, res) => {
                     if (err) console.log(err);
-                    else if (res) console.log('Quantity added.');
+                    if (!res.affectedRows) console.log('Quantity not added. Please try another product and/or quantity');
+                    else if (res.affectedRows) console.log('Quantity added.')
                     this.next();
                 }
                 )

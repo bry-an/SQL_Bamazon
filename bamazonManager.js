@@ -66,9 +66,9 @@ let managerInterface = {
     },
 
     viewLowInventory: function () {
-        connection.query('SELECT * FROM products WHERE stock_quantity < 10', (err, items) => {
+        connection.query('SELECT * FROM products WHERE stock_quantity < 100', (err, items) => {
             if (err) console.log(err);
-            console.log('The following items have a quantity fewer than 10\n')
+            console.log('The following items have a quantity fewer than 100\n')
             items.forEach(item => console.log(
                 'Item Id: ' + item.id + '\n' +
                 'Name: ' + item.product_name + '\n' +

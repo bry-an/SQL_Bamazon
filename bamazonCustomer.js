@@ -3,7 +3,7 @@ let inquirer = require('inquirer');
 
 let connection = mysql.createConnection({
     host: 'localhost',
-    port: 8889,
+    port: 3306,
     user: 'root',
     password: 'root',
     database: 'bamazon'
@@ -20,6 +20,7 @@ let customerInterface = {
 
     orderTotal: 0,
     cartItems: [],
+    cartIndex: 0,
 
     displayItems: function () {
         connection.query("SELECT id, product_name, price FROM products", (err, displayedItems) => {
@@ -61,13 +62,13 @@ let customerInterface = {
     },
 
     selectQuantity: function (answer) {
-        const query = 'SELECT stock_quantity, product_name, price FROM products WHERE id = ?';
+        const query = 'SELECT stock_quantity, product_name, price, department_name FROM products WHERE id = ?';
         const item = answer.whichItem;
         connection.query(query, item, (err, results) => {
             if (err) throw err;
 
             this.orderTotal = results[0].price;
-            this.cartItems.push({ name: results[0].product_name, id: item })
+            this.cartItems.push({ name: results[0].product_name, id: item, department: results[0].department_name })
             const stockQuantity = results[0].stock_quantity;
 
             const validateStock = (quantity) => {
@@ -89,19 +90,43 @@ let customerInterface = {
 
             inquirer
                 .prompt(question)
-                .then((answer) => {
+                .then(answer => {
                     this.orderTotal *= answer.quantity;
-                    console.log('Thanks! Your order of ' + answer.quantity + 'x ' + this.cartItems[0].name + ' for $' + this.orderTotal.toFixed(2) + ' has been successfully placed.');
+                    console.log('Thanks! Your order of ' + answer.quantity + 'x ' + this.cartItems[this.cartIndex].name + ' for $' + this.orderTotal.toFixed(2) + ' has been successfully placed.');
                     this.updateDatabase(answer.quantity);
-                    connection.end();
+                    this.next();
             });
         });
     },
 
     updateDatabase: function (quantityPurchased) {
         const query = 'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?';
-        connection.query(query, [quantityPurchased, this.cartItems[0].id])
+        connection.query(query, [quantityPurchased, this.cartItems[this.cartIndex].id]);
+        const query2 = 'UPDATE products SET product_sales = product_sales + ? where id =?';
+        connection.query(query2, [this.orderTotal, this.cartItems[this.cartIndex].id]);
+        this.cartIndex++;
+    },
 
+    next: function () {
+        inquirer
+            .prompt([
+                {
+                    name: 'continue',
+                    type: 'list', 
+                    choices: ['Make another purchase', 'Exit'],
+                    message: 'Please select an option'
+                }
+            ]).then(answer => {
+                if (answer.continue === 'Make another purchase')
+                    this.displayItems()
+                else if (answer.continue === 'Exit')
+                    this.closeConnection();
+            })
+        console.log
+    }, 
+
+    closeConnection: function() {
+        connection.end();
     }
 }
 

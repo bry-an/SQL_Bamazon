@@ -27,3 +27,17 @@ VALUES
     ("Clean Code", "Books_Non-Fiction", 10.99, 45);
 
 SELECT * FROM products;
+
+ALTER TABLE products
+ADD product_sales DECIMAL(8, 2);
+
+USE bamazon; 
+
+CREATE TABLE departments (
+    id INT NOT NULL AUTO_INCREMENT, 
+    department_id, 
+    department_name, 
+    over_head_costs, 
+    PRIMARY KEY (id)
+);
+

@@ -1,11 +1,10 @@
 let mysql = require('mysql');
 let inquirer = require('inquirer');
-let Product = require('./product')
 
 let connection = mysql.createConnection({
     multipleStatements: true,
     host: 'localhost',
-    port: 8889,
+    port: 3306,
     user: 'root',
     password: 'root',
     database: 'bamazon'
@@ -19,17 +18,11 @@ connection.connect(err => {
 
 let managerInterface = {
 
-    displayItems: function () {
-        connection.query('SELECT * FROM products', (err, items) => {
-            if (err) console.log(err);
-            items.forEach(item => console.log(
-                'Item Id: ' + item.id + '\n' +
-                'Name: ' + item.product_name + '\n' +
-                'Price: ' + item.price + '\n' +
-                'Quantity: ' + item.stock_quantity + '\n============\n'
-            ));
-        });
+    validateNumericInput: (quantity) => {
+        if (parseInt(quantity) > 0 && !isNaN(quantity)) return true;
+        else return 'Please enter a valid number'
     },
+
     welcomePrompt: function () {
         let questions = {
             message: 'Welcome to the Bamazon Manager View',
@@ -59,11 +52,8 @@ let managerInterface = {
             });
     },
     viewProducts: function () {
-        this.displayItems();
-    },
-
-    viewLowInventory: function () {
-        connection.query('SELECT * FROM products WHERE stock_quantity < 80', (err, items) => {
+        console.log('The following products are currently for sale')
+        connection.query('SELECT * FROM products', (err, items) => {
             if (err) console.log(err);
             items.forEach(item => console.log(
                 'Item Id: ' + item.id + '\n' +
@@ -71,107 +61,125 @@ let managerInterface = {
                 'Price: ' + item.price + '\n' +
                 'Quantity: ' + item.stock_quantity + '\n============\n'
             ));
+            this.next()
         });
-        this.next();
+    },
+
+    viewLowInventory: function () {
+        connection.query('SELECT * FROM products WHERE stock_quantity < 10', (err, items) => {
+            if (err) console.log(err);
+            console.log('The following items have a quantity fewer than 10\n')
+            items.forEach(item => console.log(
+                'Item Id: ' + item.id + '\n' +
+                'Name: ' + item.product_name + '\n' +
+                'Price: ' + item.price + '\n' +
+                'Quantity: ' + item.stock_quantity + '\n============\n'
+            ));
+            this.next();
+        });
     },
 
     addToInventory: function () {
         connection.query('SELECT * FROM products', (err, items) => {
             if (err) console.log(err);
 
-            let names = [];
+            let products = [];
+            items.forEach(item => {
+                products.push('id: ' + item.id + ' | ' + 
+                    item.product_name)
+            });
 
-            const validateQuantity = (quantity) => {
-                if (parseInt(quantity) > 0) return true;
-                else return 'Please enter a valid quantity'
-            };
 
             let questions = [
                 {
                     name: 'selectedProduct',
                     type: 'list',
                     message: 'Add inventory to which product?',
-                    choices: names
+                    choices: products
                 },
                 {
                     name: 'quantityToAdd',
                     type: 'input',
-                    validate: validateQuantity,
+                    validate: this.validateNumericInput,
                     message: 'How many units?'
                 }
             ];
 
-            items.forEach(item => {
-                names.push(item.product_name);
-            })
+            products = JSON.stringify(products);
+            console.log(products);
+
             inquirer
                 .prompt(questions)
                 .then(answer => {
-                console.log('in promise')
                 connection.query('UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_name = ?', 
                 [
                     answer.quantityToAdd, answer.selectedProduct
                 ], (err, res) => {
                     if (err) console.log(err);
                     else if (res) console.log('Quantity added.');
+                    this.next();
                 }
                 )
             })
         })
-        this.next();
     },
 
     addNewProduct: function () {
-        inquirer
-            .prompt([
-                {
-                    type: 'input',
-                    name: 'product_name',
-                    message: 'Name of new product:'
-                },
-                {
-                    type: 'input',
-                    name: 'department_name',
-                    message: 'In which department:'
-                },
-                {
-                    type: 'input',
-                    name: 'price',
-                    message: 'Cost of product:'
-                },
-                {
-                    type: 'input',
-                    name: 'stock_quantity',
-                    message: 'Quantity of product:'
-                },
-            ]).then(answer => {
-                connection.query('INSERT INTO products SET ?',
+        let questions = 
+                [
                     {
-                        product_name: answer.product_name,
-                        department_name: answer.department_name,
-                        price: parseInt(answer.price),
-                        stock_quantity: parseInt(answer.stock_quantity)
-                    }, (err, res) => {
-                        if(err) console.log(err);
-                        else if(res) console.log('The following product successfully added:')
-                    }
-                );
-                connection.query('SELECT * FROM products WHERE ?',
-                    { product_name: answer.product_name },
+                        type: 'input',
+                        name: 'product_name',
+                        message: 'Name of new product:',
+                    },
+                    {
+                        type: 'input',
+                        name: 'department_name',
+                        message: 'In which department:'
+                    },
+                    {
+                        type: 'input',
+                        name: 'price',
+                        message: 'Cost of product:',
+                        validate: this.validateNumericInput
+                    },
+                    {
+                        type: 'input',
+                        name: 'stock_quantity',
+                        message: 'Quantity of product:',
+                        validate: this.validateNumericInput
+                    },
+                ]
+        inquirer
+            .prompt(questions)
+                .then(answer => {
+                    connection.query('INSERT INTO products SET ?',
+                        {
+                            product_name: answer.product_name,
+                            department_name: answer.department_name,
+                            price: parseInt(answer.price),
+                            stock_quantity: parseInt(answer.stock_quantity)
+                        }, (err, res) => {
+                            if(err) console.log(err);
+                            else if(res) console.log('The following product successfully added:\n')
+                        }
+                    );
+                connection.query("SELECT * from products WHERE id = (SELECT MAX(id) from products)",
                     (err, items) => {
                         if (err) console.log(err);
                         items.forEach(item => {
                             console.log(
                                 'Item Id: ' + item.id + '\n' +
                                 'Name: ' + item.product_name + '\n' +
+                                'Department: ' + item.department_name + '\n' +
                                 'Price: ' + item.price + '\n' +
                                 'Quantity: ' + item.stock_quantity + '\n============\n'
                             )
                         });
+                        this.next();
                     }
                 );
             });
-        this.next();
     }, 
 
     next: function() {
@@ -180,13 +188,14 @@ let managerInterface = {
                 {
                     name: 'continue',
                     type: 'list', 
-                    choices: ['Return to Manager View', 'Exit']
+                    choices: ['Main Menu', 'Exit'],
+                    message: 'Please select an option:'
                 }
-            ]).then(answer=> {
-                if (answer.continue === 'Return to Manager View')
-                    this.welcomePrompt;
+            ]).then(answer => {
+                if (answer.continue === 'Main Menu')
+                    this.welcomePrompt();
                 else if (answer.continue === 'Exit')
-                    this.closeConnection;
+                    this.closeConnection();
             });
 
     },
